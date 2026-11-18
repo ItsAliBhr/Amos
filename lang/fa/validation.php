@@ -1,0 +1,50 @@
+<?php
+
+return [
+    'accepted' => ':attribute باید پذیرفته شود.',
+    'alpha_dash' => ':attribute فقط می‌تواند شامل حروف، اعداد، خط تیره و زیرخط باشد.',
+    'between' => [
+        'numeric' => ':attribute باید بین :min و :max باشد.',
+        'string' => ':attribute باید بین :min و :max کاراکتر باشد.',
+        'file' => 'حجم :attribute باید بین :min و :max کیلوبایت باشد.',
+    ],
+    'boolean' => ':attribute باید درست یا نادرست باشد.',
+    'confirmed' => 'تکرار :attribute مطابقت ندارد.',
+    'email' => ':attribute باید یک ایمیل معتبر باشد.',
+    'exists' => ':attribute انتخاب‌شده معتبر نیست.',
+    'file' => ':attribute باید فایل باشد.',
+    'gte' => ['numeric' => ':attribute باید بزرگ‌تر یا مساوی :value باشد.'],
+    'in' => ':attribute انتخاب‌شده معتبر نیست.',
+    'integer' => ':attribute باید عدد صحیح باشد.',
+    'max' => [
+        'numeric' => ':attribute نباید بیشتر از :max باشد.',
+        'string' => ':attribute نباید بیشتر از :max کاراکتر باشد.',
+        'file' => 'حجم :attribute نباید بیشتر از :max کیلوبایت باشد.',
+    ],
+    'mimes' => ':attribute باید فایلی از نوع :values باشد.',
+    'mimetypes' => ':attribute باید فایلی از نوع :values باشد.',
+    'min' => [
+        'numeric' => ':attribute نباید کمتر از :min باشد.',
+        'string' => ':attribute نباید کمتر از :min کاراکتر باشد.',
+    ],
+    'numeric' => ':attribute باید عدد باشد.',
+    'password' => [
+        'letters' => ':attribute باید حداقل یک حرف داشته باشد.',
+        'mixed' => ':attribute باید حداقل یک حرف بزرگ و یک حرف کوچک داشته باشد.',
+        'numbers' => ':attribute باید حداقل یک عدد داشته باشد.',
+        'symbols' => ':attribute باید حداقل یک نماد داشته باشد.',
+        'uncompromised' => ':attribute در نشت‌های اطلاعاتی دیده شده است؛ رمز دیگری انتخاب کنید.',
+    ],
+    'prohibited' => 'ارسال :attribute مجاز نیست.',
+    'regex' => 'قالب :attribute معتبر نیست.',
+    'required' => 'وارد کردن :attribute الزامی است.',
+    'string' => ':attribute باید متن باشد.',
+    'timezone' => ':attribute باید منطقه زمانی معتبر باشد.',
+    'unique' => ':attribute قبلاً استفاده شده است.',
+    'uploaded' => 'بارگذاری :attribute ناموفق بود.',
+    'url' => 'قالب :attribute معتبر نیست.',
+    'attributes' => [
+        'name' => 'نام', 'username' => 'نام کاربری', 'password' => 'رمز عبور', 'email' => 'ایمیل', 'mobile' => 'موبایل',
+        'amount' => 'مبلغ', 'note' => 'توضیح', 'reason' => 'دلیل', 'status' => 'وضعیت', 'description' => 'شرح',
+    ],
+];

@@ -1,0 +1,13 @@
+# Fallback protection if the WHOLE project folder is accidentally uploaded under the web root.
+# Preferred setups: Document Root -> amos_app/public, or the amos_app + public_html layout (see docs/INSTALL-cPanel.md).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+Options -Indexes

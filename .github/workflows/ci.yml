@@ -1,0 +1,48 @@
+name: CI & Deployment ZIP
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: amos_test
+          MYSQL_USER: amos
+          MYSQL_PASSWORD: amos_dev_pw
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -proot" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, intl, zip
+          coverage: none
+      - name: Grant test databases
+        run: mysql -h127.0.0.1 -uroot -proot -e "GRANT ALL ON \`amos_install%\`.* TO 'amos'@'%'; GRANT ALL ON amos_test.* TO 'amos'@'%'; FLUSH PRIVILEGES;"
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate
+      - run: php artisan test
+
+  zip:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, zip
+      - run: deployment/build-zip.sh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AMOS-cPanel-Deployment
+          path: dist/AMOS-cPanel-Deployment.zip

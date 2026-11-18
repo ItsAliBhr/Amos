@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "name": "amos-assets",
+  "description": "Development-only: copies vendor frontend assets into public/vendor. Production needs no Node.js.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-assets.mjs"
+  },
+  "devDependencies": {
+    "bootstrap": "5.3.3",
+    "bootstrap-icons": "1.11.3",
+    "chart.js": "4.4.4",
+    "vazirmatn": "33.0.3"
+  }
+}
