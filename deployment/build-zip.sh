@@ -8,6 +8,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${1:-$ROOT/dist}"
+mkdir -p "$OUT" && OUT="$(cd "$OUT" && pwd)"
 BUILD="$(mktemp -d)"
 APP="$BUILD/amos_app"
 PUB="$BUILD/public_html"
@@ -15,12 +16,13 @@ mkdir -p "$APP" "$PUB" "$OUT"
 
 echo "==> Copying source"
 rsync -a "$ROOT/" "$APP/" \
-  --exclude '.git' --exclude '.github' --exclude 'node_modules' --exclude 'vendor' --exclude 'dist' \
+  --exclude '/.git' --exclude '/.github' --exclude 'node_modules' --exclude '/vendor' --exclude '/dist' \
   --exclude '.env' --exclude '.env.backup' --exclude '.phpunit.cache' --exclude '.phpunit.result.cache' \
   --exclude 'storage/logs/*.log' --exclude 'storage/app/installed.lock' \
   --exclude 'storage/framework/sessions/*' --exclude 'storage/framework/views/*' --exclude 'storage/framework/cache/data/*' \
   --exclude 'storage/app/private/*' --exclude 'storage/app/receipts' --exclude 'storage/app/investments' --exclude 'storage/app/ideas' \
-  --exclude 'bootstrap/cache/*.php' --exclude 'deployment/public_html' --exclude '*.zip'
+  --exclude 'bootstrap/cache/*.php' --exclude 'deployment/public_html' --exclude '*.zip' \
+  --exclude 'tests' --exclude 'phpunit.xml'
 
 # keep the storage skeleton (.gitignore placeholders)
 for d in storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache; do
@@ -33,10 +35,12 @@ done
 echo "==> Installing production dependencies (no dev)"
 ( cd "$APP" && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-progress ${COMPOSER_PREFER:---prefer-dist} --no-scripts )
 find "$APP/vendor" -name .git -type d -prune -exec rm -rf {} +
+# drop package test suites / CI metadata (present when installed from git sources)
+find "$APP/vendor" -mindepth 3 -maxdepth 3 -type d \( -name tests -o -name Tests -o -name .github \) -prune -exec rm -rf {} +
 ( cd "$APP" && APP_KEY=base64:$(head -c32 /dev/urandom | base64) php artisan package:discover --ansi >/dev/null )
 
 # deny-all guards for private folders (defence in depth if ever exposed)
-for d in app bootstrap config database lang resources routes storage vendor docs deployment scripts tests; do
+for d in app bootstrap config database lang resources routes storage vendor docs deployment scripts; do
   [ -d "$APP/$d" ] && printf 'Require all denied\n' > "$APP/$d/.htaccess"
 done
 
@@ -48,7 +52,9 @@ cp "$ROOT/docs/INSTALL-cPanel.md" "$BUILD/INSTALL-FA.md"
 echo "==> Sanity checks"
 test ! -e "$APP/.env" || { echo ".env must not be shipped"; exit 1; }
 test ! -d "$APP/node_modules" || { echo "node_modules must not be shipped"; exit 1; }
-if grep -rIl --exclude-dir=vendor -E "DB_PASSWORD=.+[^=]$" "$APP" | grep -v '.env.example' | grep -q .; then echo "possible secret found"; exit 1; fi
+test ! -e "$APP/storage/app/installed.lock" || { echo "install lock must not be shipped"; exit 1; }
+if find "$APP" -path "$APP/vendor" -prune -o -name '.env*' ! -name '.env.example' -print | grep -q .; then echo "environment file found in package"; exit 1; fi
+if [ -n "$(find "$APP/storage/app/private" -type f ! -name .gitignore)" ]; then echo "uploaded files found in package"; exit 1; fi
 
 echo "==> Zipping"
 rm -f "$OUT/AMOS-cPanel-Deployment.zip"

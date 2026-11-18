@@ -22,6 +22,15 @@
         $content = file_get_contents($example);
         $key = 'base64:'.base64_encode(random_bytes(32));
         $content = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY='.$key, $content);
+        // Until SSL is configured the installer must work over plain HTTP; the installer later
+        // sets these flags from the URL the operator enters.
+        $https = (! empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+            || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'
+            || (string) ($_SERVER['SERVER_PORT'] ?? '') === '443';
+        if (! $https) {
+            $content = preg_replace('/^FORCE_HTTPS=.*$/m', 'FORCE_HTTPS=false', $content);
+            $content = preg_replace('/^SESSION_SECURE_COOKIE=.*$/m', 'SESSION_SECURE_COOKIE=false', $content);
+        }
         file_put_contents($env, $content, LOCK_EX);
         @chmod($env, 0600);
     } elseif (is_file($env) && is_writable($env)) {
