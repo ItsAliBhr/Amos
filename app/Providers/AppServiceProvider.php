@@ -7,6 +7,7 @@ use App\Models\InvestmentUnit;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+
+        // Older MySQL/MariaDB on shared hosts limit index keys to 767 bytes (utf8mb4 => 191 chars).
+        Schema::defaultStringLength(191);
 
         if (config('amos.force_https') && $this->app->environment('production')) {
             URL::forceScheme('https');

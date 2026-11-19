@@ -108,6 +108,7 @@ php artisan amos:install --admin-name="نام مدیر" --admin-username=admin -
 
 | مشکل | راه‌حل |
 |---|---|
+| خطا هنگام نصب | نصب‌کننده علت را بالای فرم نشان می‌دهد. پس از رفع (مثلاً دادن ALL PRIVILEGES به کاربر دیتابیس) دوباره «نصب» را بزنید؛ جداول نیمه‌کاره نصب ناموفق قبلی خودکار پاک می‌شوند. |
 | صفحه سفید یا خطای 500 | `amos_app/storage/logs/` را بررسی کنید؛ مجوز `storage` و `bootstrap/cache` را 775 کنید. |
 | «نسخه PHP پشتیبانی نمی‌شود» | نسخه PHP دامنه را در MultiPHP Manager روی 8.3+ بگذارید. |
 | «پوشه برنامه AMOS پیدا نشد» | `amos_app` باید کنار `public_html` باشد یا `AMOS_APP_PATH` را در `public_html/index.php` اصلاح کنید. |

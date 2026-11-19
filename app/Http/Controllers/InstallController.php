@@ -42,11 +42,21 @@ class InstallController extends Controller
             }
         }
 
-        $installer->install(
+        try {
+            $installer->install(
             ['host' => $data['db_host'], 'port' => $data['db_port'], 'database' => $data['db_database'], 'username' => $data['db_username'], 'password' => $data['db_password'] ?? ''],
             ['name' => $data['admin_name'], 'username' => $data['admin_username'], 'password' => $data['admin_password']],
             ['url' => $data['app_url'], 'fund_name' => $data['fund_name']],
-        );
+            );
+        } catch (\App\Domain\DomainException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            // Show the real cause on the installer page instead of a bare HTTP 500.
+            \Illuminate\Support\Facades\Log::error('AMOS install failed', ['exception' => $e]);
+
+            return back()->withInput($request->except(['db_password', 'admin_password', 'admin_password_confirmation']))
+                ->with('error', 'نصب ناموفق بود: '.Installer::safeMessage($e).' (جزئیات کامل در amos_app/storage/logs)');
+        }
 
         $request->session()->flush();
 

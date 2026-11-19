@@ -105,6 +105,29 @@ class InstallerTest extends BaseTestCase
         $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM `{$this->db}`.users WHERE username='intruder'")->fetchColumn());
     }
 
+    public function test_install_can_be_retried_after_a_failed_attempt(): void
+    {
+        // Simulate leftovers of a failed install: some AMOS tables, no users.
+        $pdo = $this->pdo();
+        $pdo->exec("USE `{$this->db}`");
+        $pdo->exec('CREATE TABLE migrations (id INT)');
+        $pdo->exec('CREATE TABLE users (id INT)');
+        $pdo->exec('CREATE TABLE fund_settings (id INT)');
+
+        $this->post('/install', $this->payload())->assertRedirect('/');
+        $this->assertFileExists($this->dir.'/installed.lock');
+        $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM `{$this->db}`.users WHERE username='boss'")->fetchColumn());
+    }
+
+    public function test_installer_refuses_database_of_another_application(): void
+    {
+        $pdo = $this->pdo();
+        $pdo->exec("CREATE TABLE `{$this->db}`.wp_posts (id INT)");
+        $this->post('/install', $this->payload())->assertSessionHas('error');
+        $this->assertFileDoesNotExist($this->dir.'/installed.lock');
+        $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{$this->db}'")->fetchColumn());
+    }
+
     public function test_installer_rejects_weak_admin_password_and_bad_db_credentials(): void
     {
         $this->post('/install', $this->payload(['admin_password' => 'weak', 'admin_password_confirmation' => 'weak']))->assertSessionHasErrors('admin_password');

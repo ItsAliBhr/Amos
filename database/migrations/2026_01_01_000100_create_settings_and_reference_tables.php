@@ -31,7 +31,7 @@ return new class extends Migration
             $table->unsignedInteger('max_upload_kb')->default(5120);
             $table->unsignedInteger('valuation_stale_days')->default(30);
             $table->string('timezone', 64)->default('Asia/Tehran');
-            $table->json('settings_json')->nullable();
+            $table->longText('settings_json')->nullable();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });

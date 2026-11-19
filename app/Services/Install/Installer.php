@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use PDO;
 use Throwable;
@@ -60,10 +61,7 @@ class Installer
         }
 
         $pdo = self::testConnection($db);
-        $hasUsers = (bool) $pdo->query("SHOW TABLES LIKE 'users'")->fetch();
-        if ($hasUsers && (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() > 0) {
-            throw new DomainException('این دیتابیس قبلاً داده دارد. برای جلوگیری از بازنویسی، از یک دیتابیس خالی استفاده کنید.');
-        }
+        $this->prepareDatabase($pdo);
 
         if ($writeEnv) {
             $env = [
@@ -94,8 +92,18 @@ class Installer
         DB::purge('mysql');
         DB::reconnect('mysql');
 
-        Artisan::call('migrate', ['--force' => true]);
-        (new ReferenceDataSeeder())->run();
+        try {
+            $code = Artisan::call('migrate', ['--force' => true]);
+            if ($code !== 0) {
+                throw new \RuntimeException(trim(Artisan::output()) ?: 'migrate exit code '.$code);
+            }
+            (new ReferenceDataSeeder())->run();
+        } catch (DomainException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            Log::error('AMOS install: database setup failed', ['exception' => $e]);
+            throw new DomainException('ساخت جداول دیتابیس ناموفق بود: '.self::safeMessage($e).' — اگر پیام به دسترسی (denied) اشاره دارد، در Manage My Databases کاربر را با ALL PRIVILEGES به دیتابیس اضافه کنید. سپس دوباره «نصب» را بزنید.');
+        }
 
         $user = DB::transaction(function () use ($admin, $app) {
             if (User::where('role', User::ROLE_ADMIN)->exists()) {
@@ -124,6 +132,47 @@ class Installer
         self::writeLock();
 
         return $user;
+    }
+
+    /** Tables created by AMOS migrations (used to recognise leftovers of a failed install). */
+    public const TABLES = [
+        'migrations', 'users', 'password_reset_tokens', 'sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs',
+        'fund_settings', 'contribution_types', 'ownership_accounts', 'cash_accounts', 'asset_categories', 'assets', 'attachments',
+        'ledger_transactions', 'ledger_entries', 'investment_units', 'nav_snapshots', 'contributions', 'monthly_commitments',
+        'investment_transactions', 'asset_valuations', 'ideas', 'idea_reviews', 'idea_review_histories', 'idea_status_histories',
+        'withdrawal_requests', 'notifications', 'audit_logs',
+    ];
+
+    /**
+     * Never overwrite real data: refuse a database that has users or tables of another application.
+     * Leftovers of a previous FAILED AMOS install (AMOS tables only, no users) are removed so the install can be retried.
+     */
+    private function prepareDatabase(PDO $pdo): void
+    {
+        $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+        if ($tables === []) {
+            return;
+        }
+        if (in_array('users', $tables, true) && (int) $pdo->query('SELECT COUNT(*) FROM `users`')->fetchColumn() > 0) {
+            throw new DomainException('این دیتابیس قبلاً داده دارد. برای جلوگیری از بازنویسی، از یک دیتابیس خالی استفاده کنید.');
+        }
+        $foreign = array_diff($tables, self::TABLES);
+        if ($foreign !== []) {
+            throw new DomainException('این دیتابیس جداول برنامه دیگری را دارد ('.implode('، ', array_slice($foreign, 0, 5)).'). برای AMOS یک دیتابیس خالی جدید بسازید.');
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
+        foreach ($tables as $t) {
+            $pdo->exec('DROP TABLE IF EXISTS `'.str_replace('`', '', $t).'`');
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
+        Log::warning('AMOS install: removed leftover tables of a previous failed install', ['tables' => $tables]);
+    }
+
+    public static function safeMessage(Throwable $e): string
+    {
+        $msg = preg_replace('/\(Connection: .*$/s', '', $e->getMessage());
+
+        return mb_substr(trim((string) $msg), 0, 400);
     }
 
     public static function writeLock(): void
