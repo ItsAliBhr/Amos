@@ -80,6 +80,8 @@ class InstallerTest extends BaseTestCase
         $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM ownership_accounts WHERE owner_type='pool'")->fetchColumn());
         $this->assertSame('صندوق آزمایشی', $pdo->query('SELECT fund_name FROM fund_settings')->fetchColumn());
         $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM contributions')->fetchColumn(), 'no demo data');
+        // Every table must be InnoDB (transactions + foreign keys), even if the server defaults to MyISAM.
+        $this->assertSame([], $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema='{$this->db}' AND engine <> 'InnoDB'")->fetchAll(PDO::FETCH_COLUMN));
 
         // Locked: the installer is no longer reachable and cannot run again.
         $this->get('/install')->assertNotFound();
